@@ -1,0 +1,995 @@
+neon-pinball/
+├─ README.md
+├─ package.json
+├─ vite.config.js
+├─ .gitignore
+├─ public/
+│  ├─ favicon.svg
+│  └─ robots.txt
+├─ src/
+│  ├─ index.html
+│  ├─ main.js
+│  ├─ styles.css
+│  ├─ sfx/
+│  │  ├─ bumper.wav        (placeholder note inside)
+│  │  ├─ flipper.wav       (placeholder note inside)
+│  │  ├─ launch.wav        (placeholder note inside)
+│  │  └─ drain.wav         (placeholder note inside)
+│  └─ assets/
+│     └─ sprites.md        (notes for neon lamps/targets)
+├─ electron/
+│  ├─ main.js
+│  └─ preload.js
+└─ capacitor/
+   ├─ capacitor.config.ts
+   └─ README-mobile.md
+# Neon Pixel Pinball
+
+Retro, neon pinball for web, desktop (Electron), and mobile (Capacitor). Pixel aesthetic, neon palette, responsive canvas, keyboard/touch controls.
+
+## Quick start (web)
+1. npm install
+2. npm run dev
+3. Open http://localhost:5173
+
+## Desktop (Electron)
+- npm run desktop (starts Vite + Electron)
+- npm run desktop:build (packages app)
+
+## Mobile (Capacitor)
+1. npm run mobile:init
+2. npx capacitor add android
+3. npx capacitor add ios
+4. npm run build
+5. npx capacitor copy
+6. npx capacitor open android (or ios)
+
+## Controls
+- Left/Right or A/D: flippers
+- Space: hold and release to launch
+- Mobile: on-screen LEFT/RIGHT buttons
+
+## Palette
+- Green: #3aff7a
+- Pink: #ff4fd8
+- Blue: #47c0ff
+- Purple: #9a6bff
+- Background: #0b0f14
+- Apron: #131a22
+
+## Roadmap
+- Tilt/nudge with streak penalty
+- Neon lamps + multipliers
+- SFX pack + haptics
+- Electron auto-update
+- Leaderboards (optional)
+
+{
+  "name": "neon-pinball",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "desktop": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "desktop:build": "vite build && electron-builder",
+    "mobile:init": "npm run build && npx cap init \"Neon Pixel Pinball\" \"com.example.neonpinball\" --web-dir dist"
+  },
+  "dependencies": {
+    "concurrently": "^9.0.0",
+    "wait-on": "^7.0.1"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/cli": "^6.0.0"
+  }
+}
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  server: { port: 5173 },
+  build: { outDir: 'dist' }
+})node_modules
+dist
+out
+.DS_Store
+*.log
+android/
+ios/
+;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="10" fill="#0b0f14"/>
+  <circle cx="32" cy="24" r="10" fill="#47c0ff"/>
+  <path d="M16 48 L28 40" stroke="#3aff7a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M48 48 L36 40" stroke="#ff4fd8" stroke-width="5" stroke-linecap="round"/>
+</svUser-agent: *
+Disallow:
+g><!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Neon Pixel Pinball</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link rel="icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="hud"><b>Score:</b> <span id="score">0</span> | <b>Balls:</b> <span id="balls">3</span></div>
+  <div class="wrap">
+    <canvas id="game" width="480" height="800"></canvas>
+  </div>
+  <div class="controls">
+    <div id="btnLeft" class="btn">LEFT</div>
+    <div id="btnRight" class="btn">RIGHT</div>
+  </div>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
+:root {
+  --bg: #0b0f14;
+  --apron: #131a22;
+  --green: #3aff7a;
+  --pink: #ff4fd8;
+  --blue: #47c0ff;
+  --purple: #9a6bff;
+  --text: #cfe9ff;
+}
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); }
+body { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#hud { position:fixed; top:12px; left:12px; font:14px monospace; text-shadow: 0 0 6px rgba(74,255,181,0.5); }
+#hud b { color: var(--green); }
+.wrap { position: relative; }
+canvas { border:2px solid var(--green); background: var(--bg); image-rendering: pixelated; }
+.controls {
+  position: fixed; bottom: 16px; width: 100%; display: flex; justify-content: space-between; padding: 0 24px; pointer-events: none;
+}
+.btn {
+  pointer-events: auto;
+  width: 30vw; max-width: 240px; height: 64px;
+  border: 2px solid var(--purple);
+  color: var(--text);
+  background: rgba(154,107,255,0.12);
+  font: 16px monospace;
+  border-radius: 10px;
+  text-align: center; line-height: 64px;
+  box-shadow: 0 0 12px rgba(154,107,255,0.5);
+  user-select: none;
+}
+.btn:active { box-shadow: 0 0 20px rgba(154,107,255,0.8); border-color: var(--pink); }
+@media (min-width: 900px) { .controls { display:none; } }
+// Theme
+const theme = {
+  green:'#3aff7a', pink:'#ff4fd8', blue:'#47c0ff', purple:'#9a6bff',
+  bg:'#0b0f14', apron:'#131a22', text:'#cfe9ff'
+};
+
+// Canvas + responsive scaling
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const VIRTUAL_W = 480, VIRTUAL_H = 800;
+function resizeCanvas() {
+  const maxW = Math.min(window.innerWidth - 24, 640);
+  const maxH = Math.min(window.innerHeight - 140, 1000);
+  const scale = Math.min(maxW / VIRTUAL_W, maxH / VIRTUAL_H);
+  canvas.style.width = (VIRTUAL_W * scale) + 'px';
+  canvas.style.height = (VIRTUAL_H * scale) + 'px';
+}
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+const scoreEl = document.getElementById('score');
+const ballsEl = document.getElementById('balls');
+
+// World constants
+const GRAV = 0.32, FRICTION = 0.995, PIX = 4;
+
+// Input
+const keys = { left:false, right:false, space:false };
+window.addEventListener('keydown', e => {
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+  if (e.code === 'Space') keys.space = true;
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+  if (e.code === 'Space') keys.space = false;
+});
+// Touch
+function bindTouch(el, key) {
+  const on = () => keys[key] = true;
+  const off = () => keys[key] = false;
+  el.addEventListener('touchstart', e => { e.preventDefault(); on(); }, {passive:false});
+  el.addEventListener('touchend', e => { e.preventDefault(); off(); }, {passive:false});
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
+}
+bindTouch(document.getElementById('btnLeft'), 'left');
+bindTouch(document.getElementById('btnRight'), 'right');
+
+// Game state
+let score = 0, balls = 3, gameOver = false;
+
+// Entities
+const ball = { x: VIRTUAL_W-50, y: VIRTUAL_H-120, vx:0, vy:0, r:6, alive:true, launched:false };
+const plunger = { x: VIRTUAL_W-40, y: VIRTUAL_H-120, w:24, h:120, power:0, max:22 };
+
+const flippers = [
+  { x: 160, y: VIRTUAL_H-140, len: 92, angle: -0.2, baseAngle: -0.6, maxAngle: 0.15, dir: -1, key:'left', color: theme.green },
+  { x: VIRTUAL_W-160, y: VIRTUAL_H-140, len: 92, angle: 0.2,  baseAngle: 0.6,  maxAngle: -0.15, dir: 1,  key:'right', color: theme.pink }
+];
+
+const bumpers = [
+  { x: 140, y: 260, r: 18, value: 250, color: theme.blue },
+  { x: 240, y: 220, r: 18, value: 250, color: theme.pink },
+  { x: 340, y: 260, r: 18, value: 250, color: theme.purple }
+];
+
+const walls = [
+  { x1: 20, y1: 20, x2: 20, y2: VIRTUAL_H-100 },
+  { x1: VIRTUAL_W-20, y1: 20, x2: VIRTUAL_W-20, y2: VIRTUAL_H-100 },
+  { x1: 20, y1: 20, x2: VIRTUAL_W-20, y2: 20 },
+  { x1: 20, y1: VIRTUAL_H-220, x2: 140, y2: VIRTUAL_H-140 },
+  { x1: VIRTUAL_W-20, y1: VIRTUAL_H-220, x2: VIRTUAL_W-140, y2: VIRTUAL_H-140 },
+  { x1: VIRTUAL_W-80, y1: 20, x2: VIRTUAL_W-80, y2: VIRTUAL_H-100 },
+  { x1: VIRTUAL_W-80, y1: VIRTUAL_H-100, x2: VIRTUAL_W-20, y2: VIRTUAL_H-100 }
+];
+
+// SFX hooks
+const sfx = {
+  bumper: null, // new Audio('/sfx/bumper.wav')
+  flipper: null, // new Audio('/sfx/flipper.wav')
+  launch: null,  // new Audio('/sfx/launch.wav')
+  drain: null    // new Audio('/sfx/drain.wav')
+};
+function playSfx(a) { if (a && a.play) { a.currentTime = 0; a.play(); } }
+
+// Helpers
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+function resetBall() {
+  ball.x = VIRTUAL_W-50; ball.y = VIRTUAL_H-120; ball.vx = 0; ball.vy = 0;
+  ball.alive = true; ball.launched = false; plunger.power = 0;
+}
+function launchLogic() {
+  if (!ball.launched && ball.x > VIRTUAL_W-80- ball.r - 1) {
+    if (keys.space) plunger.power = Math.min(plunger.max, plunger.power + 0.6);
+    else if (plunger.power > 0) {
+      ball.vy = -plunger.power * 1.8;
+      ball.launched = true;
+      playSfx(sfx.launch);
+      plunger.power = 0;
+    }
+  }
+}
+function updateFlippers() {
+  for (const f of flippers) {
+    const target = f.baseAngle + (keys[f.key] ? f.maxAngle : 0);
+    f.angle += (target - f.angle) * 0.4;
+  }
+}
+function reflectBallOnSegment(seg) {
+  const { x1, y1, x2, y2 } = seg;
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx*dx + dy*dy;
+  const t = clamp(((ball.x - x1)*dx + (ball.y - y1)*dy) / len2, 0, 1);
+  const cx = x1 + t*dx, cy = y1 + t*dy;
+  const dist = Math.hypot(ball.x - cx, ball.y - cy);
+  if (dist < ball.r) {
+    const nx = (ball.x - cx)/dist, ny = (ball.y - cy)/dist;
+    const dot = ball.vx*nx + ball.vy*ny;
+    ball.vx -= 2 * dot * nx; ball.vy -= 2 * dot * ny;
+    ball.vx *= 0.98; ball.vy *= 0.98;
+    const overlap = ball.r - dist;
+    ball.x += nx * overlap; ball.y += ny * overlap;
+  }
+}
+function collideCircle(x, y, r, kick=1.12) {
+  const dx = ball.x - x, dy = ball.y - y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < ball.r + r) {
+    const nx = dx / dist, ny = dy / dist;
+    const dot = ball.vx*nx + ball.vy*ny;
+    ball.vx -= 2 * dot * nx; ball.vy -= 2 * dot * ny;
+    ball.vx *= kick; ball.vy *= kick;
+    const overlap = ball.r + r - dist;
+    ball.x += nx * overlap; ball.y += ny * overlap;
+    return true;
+  }
+  return false;
+}
+function flipperCollision(f) {
+  const x1 = f.x, y1 = f.y;
+  const x2 = f.x + Math.cos(f.angle) * f.len;
+  const y2 = f.y + Math.sin(f.angle) * f.len;
+  reflectBallOnSegment({ x1, y1, x2, y2 });
+  if (keys[f.key]) {
+    const ax = Math.cos(f.angle), ay = Math.sin(f.angle);
+    const impulse = 0.9;
+    const d = Math.hypot(ball.x - x2, ball.y - y2);
+    if (d < 22) {
+      ball.vx += ax * impulse * 2 * (f.dir);
+      ball.vy += ay * impulse * 2 * (f.dir);
+      playSfx(sfx.flipper);
+    }
+  }
+}
+
+// Draw helpers
+function glowCircle(x, y, r, color) {
+  ctx.shadowColor = color; ctx.shadowBlur = 12;
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#080b10'; ctx.stroke();
+}
+function drawPixelRect(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.round(x/PIX)*PIX, Math.round(y/PIX)*PIX, Math.round(w/PIX)*PIX, Math.round(h/PIX)*PIX);
+}
+
+// Game loop
+function update() {
+  ball.vy += 0.32;
+  ball.vx *= FRICTION; ball.vy *= FRICTION;
+  ball.x += ball.vx; ball.y += ball.vy;
+
+  for (const w of walls) reflectBallOnSegment(w);
+  updateFlippers();
+  for (const f of flippers) flipperCollision(f);
+
+  for (const b of bumpers) {
+    if (collideCircle(b.x, b.y, b.r, 1.15)) {
+      score += b.value; scoreEl.textContent = score; playSfx(sfx.bumper);
+    }
+  }
+
+  if (ball.y > VIRTUAL_H - 90 && ball.x < VIRTUAL_W - 80 - 10) {
+    balls--; ballsEl.textContent = balls; playSfx(sfx.drain);
+    if (balls > 0) resetBall(); else gameOver = true;
+  }
+  if (!ball.launched && ball.x < VIRTUAL_W-80 - ball.r) ball.launched = true;
+
+  launchLogic();
+}
+function draw() {
+  ctx.clearRect(0,0,VIRTUAL_W,VIRTUAL_H);
+  ctx.strokeStyle = theme.green; ctx.lineWidth = 2;
+  ctx.strokeRect(18,18,VIRTUAL_W-36,VIRTUAL_H-120);
+
+  drawPixelRect(VIRTUAL_W-80, 20, 60, VIRTUAL_H-120, theme.bg);
+  drawPixelRect(VIRTUAL_W-40, VIRTUAL_H-120 - plunger.power*4, 24, plunger.power*4, theme.green);
+
+  for (const b of bumpers) glowCircle(b.x, b.y, b.r, b.color);
+
+  ctx.strokeStyle = '#2a3b4d'; ctx.lineWidth = 4;
+  for (const w of walls) { ctx.beginPath(); ctx.moveTo(w.x1,w.y1); ctx.lineTo(w.x2,w.y2); ctx.stroke(); }
+
+  for (const f of flippers) {
+    const x1 = f.x, y1 = f.y;
+    const x2 = f.x + Math.cos(f.angle) * f.len;
+    const y2 = f.y + Math.sin(f.angle) * f.len;
+    ctx.strokeStyle = f.color; ctx.lineWidth = 6;
+    ctx.shadowColor = f.color; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#b0b0b0'; ctx.stroke();
+
+  drawPixelRect(20, VIRTUAL_H-100, VIRTUAL_W-100, 80, theme.apron);
+
+  ctx.fillStyle = theme.green; ctx.font = '12px monospace';
+  ctx.fillText('Left/Right: flippers | Space: hold & release to launch', 28, VIRTUAL_H-70);
+}
+function loop() {
+  if (!gameOver) { update(); draw(); requestAnimationFrame(loop); }
+  else {
+    ctx.fillStyle = theme.green; ctx.font = '20px monospace';
+    ctx.fillText('GAME OVER - Press Space to restart', 80, VIRTUAL_H/2);
+    if (keys.space) {
+      score = 0; balls = 3; scoreEl.textContent = 0; ballsEl.textContent = 3;
+      gameOver = false; resetBall(); requestAnimationFrame(loop);
+    }
+  }
+}
+resetBall(); loop();
+Placeholder: add WAV/MP3 files named as above. Recommended short retro bleeps for bumper/flipper, a spring launch, and a low drain tone.
+# Sprite notes
+- Neon lamps: 12px circles with outer glow (palette variants).
+- Targets: 8x12px rectangles with pulsing border.
+- Consider sprite sheet for animated lamps (on/off, pulse).
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 520,
+    height: 900,
+    backgroundColor: '#0b0f14',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+  const isDev = process.env.VITE_DEV_SERVER_URL;
+  if (isDev) {
+    win.loadURL(process.env.VITE_DEV_SERVER_URL);
+    win.webContents.openDevTools();
+  } else {
+    win.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+// Reserved for future IPC (scores, settings). Currently empty.
+import { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.example.neonpinball',
+  appName: 'Neon Pixel Pinball',
+  webDir: 'dist',
+  bundledWebRuntime: false,
+  android: {
+    allowMixedContent: true
+  }
+};
+
+export default config;
+# Mobile build (Capacitor)
+
+## Prereqs
+- Android Studio (for Android)
+- Xcode (for iOS, on macOS)
+- Java 17, Node 18+
+
+## Steps
+1. npm run mobile:init
+2. npx cap add android
+3. npx cap add ios
+4. npm run build
+5. npx cap copy
+6. npx cap open android (or ios)
+7. Build/run from the IDE. Enable hardware acceleration if needed.
+
+## Touch & haptics
+- Touch buttons are included.
+- To add haptics: use Capacitor Haptics plugin and trigger on bumper/flipper events.
+{
+  "name": "neon-pinball",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "desktop": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "desktop:build": "vite build && electron-builder",
+    "mobile:init": "npm run build && npx cap init \"Neon Pixel Pinball\" \"com.example.neonpinball\" --web-dir dist"
+  },
+  "dependencies": {
+    "concurrently": "^9.0.0",
+    "wait-on": "^7.0.1"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/cli": "^6.0.0"
+  },
+  "build": {
+    "appId": "com.example.neonpinball",
+    "productName": "Neon Pixel Pinball",
+    "files": [
+      "dist/**",
+      "electron/**"
+    ],
+    "directories": {
+      "output": "out"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/icon.icns",
+      "category": "public.app-category.games"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
+  }
+}
+/* Add at end */
+#banner {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  font: 14px monospace;
+  color: var(--bg);
+  background: var(--pink);
+  border: 2px solid var(--green);
+  box-shadow: 0 0 16px rgba(255,79,216,0.6);
+  display: none;
+}
+<!-- Add under HUD -->
+<div id="banner">TILT!</div>
+// Theme
+const theme = {
+  green:'#3aff7a', pink:'#ff4fd8', blue:'#47c0ff', purple:'#9a6bff',
+  bg:'#0b0f14', apron:'#131a22', text:'#cfe9ff'
+};
+
+// Canvas + responsive scaling
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const banner = document.getElementById('banner');
+const VIRTUAL_W = 480, VIRTUAL_H = 800;
+function resizeCanvas() {
+  const maxW = Math.min(window.innerWidth - 24, 640);
+  const maxH = Math.min(window.innerHeight - 140, 1000);
+  const scale = Math.min(maxW / VIRTUAL_W, maxH / VIRTUAL_H);
+  canvas.style.width = (VIRTUAL_W * scale) + 'px';
+  canvas.style.height = (VIRTUAL_H * scale) + 'px';
+}
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+const scoreEl = document.getElementById('score');
+const ballsEl = document.getElementById('balls');
+
+// World constants
+const GRAV = 0.32, FRICTION = 0.995, PIX = 4;
+
+// Input
+const keys = { left:false, right:false, space:false, tilt:false };
+window.addEventListener('keydown', e => {
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+  if (e.code === 'Space') keys.space = true;
+  if (e.code === 'KeyS') keys.tilt = true;
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+  if (e.code === 'Space') keys.space = false;
+  if (e.code === 'KeyS') keys.tilt = false;
+});
+// Touch
+function bindTouch(el, key) {
+  const on = () => keys[key] = true;
+  const off = () => keys[key] = false;
+  el.addEventListener('touchstart', e => { e.preventDefault(); on(); }, {passive:false});
+  el.addEventListener('touchend', e => { e.preventDefault(); off(); }, {passive:false});
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
+}
+const leftBtn = document.getElementById('btnLeft');
+const rightBtn = document.getElementById('btnRight');
+bindTouch(leftBtn, 'left');
+bindTouch(rightBtn, 'right');
+
+// Mobile dual-tap tilt detection
+let leftPressed = false, rightPressed = false;
+leftBtn.addEventListener('touchstart', () => { leftPressed = true; checkDualPress(); }, {passive:false});
+rightBtn.addEventListener('touchstart', () => { rightPressed = true; checkDualPress(); }, {passive:false});
+function checkDualPress() {
+  if (leftPressed && rightPressed) triggerNudge();
+}
+leftBtn.addEventListener('touchend', () => { leftPressed = false; }, {passive:false});
+rightBtn.addEventListener('touchend', () => { rightPressed = false; }, {passive:false});
+
+// Game state
+let score = 0, balls = 3, gameOver = false;
+let multiplier = 1;      // 1x, 2x, 3x, 5x
+let lampsLit = 0;
+let comboTime = 0;       // frames or seconds
+const COMBO_WINDOW = 1.8; // seconds
+let tiltCount = 0;
+let tiltLocked = false;
+let tiltTimer = 0;
+
+// Entities
+const ball = { x: VIRTUAL_W-50, y: VIRTUAL_H-120, vx:0, vy:0, r:6, alive:true, launched:false };
+const plunger = { x: VIRTUAL_W-40, y: VIRTUAL_H-120, w:24, h:120, power:0, max:22 };
+
+const flippers = [
+  { x: 160, y: VIRTUAL_H-140, len: 92, angle: -0.2, baseAngle: -0.6, maxAngle: 0.15, dir: -1, key:'left', color: theme.green },
+  { x: VIRTUAL_W-160, y: VIRTUAL_H-140, len: 92, angle: 0.2,  baseAngle: 0.6,  maxAngle: -0.15, dir: 1,  key:'right', color: theme.pink }
+];
+
+const bumpers = [
+  { x: 140, y: 260, r: 18, value: 250, color: theme.blue },
+  { x: 240, y: 220, r: 18, value: 250, color: theme.pink },
+  { x: 340, y: 260, r: 18, value: 250, color: theme.purple }
+];
+
+// Lamps to advance multiplier (collect all to step multiplier)
+const lamps = [
+  { x: 120, y: 160, r: 8, color: theme.green, lit: false },
+  { x: 240, y: 140, r: 8, color: theme.blue,  lit: false },
+  { x: 360, y: 160, r: 8, color: theme.purple, lit: false }
+];
+
+const walls = [
+  { x1: 20, y1: 20, x2: 20, y2: VIRTUAL_H-100 },
+  { x1: VIRTUAL_W-20, y1: 20, x2: VIRTUAL_W-20, y2: VIRTUAL_H-100 },
+  { x1: 20, y1: 20, x2: VIRTUAL_W-20, y2: 20 },
+  { x1: 20, y1: VIRTUAL_H-220, x2: 140, y2: VIRTUAL_H-140 },
+  { x1: VIRTUAL_W-20, y1: VIRTUAL_H-220, x2: VIRTUAL_W-140, y2: VIRTUAL_H-140 },
+  { x1: VIRTUAL_W-80, y1: 20, x2: VIRTUAL_W-80, y2: VIRTUAL_H-100 },
+  { x1: VIRTUAL_W-80, y1: VIRTUAL_H-100, x2: VIRTUAL_W-20, y2: VIRTUAL_H-100 }
+];
+
+// SFX
+const sfx = {
+  bumper: tryAudio('/sfx/bumper.wav'),
+  flipper: tryAudio('/sfx/flipper.wav'),
+  launch: tryAudio('/sfx/launch.wav'),
+  drain: tryAudio('/sfx/drain.wav')
+};
+function tryAudio(path) {
+  try { const a = new Audio(path); a.volume = 0.6; return a; }
+  catch { return null; }
+}
+function playSfx(a) { if (a && a.play) { a.currentTime = 0; a.play(); } }
+
+// Helpers
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+function resetBall() {
+  ball.x = VIRTUAL_W-50; ball.y = VIRTUAL_H-120; ball.vx = 0; ball.vy = 0;
+  ball.alive = true; ball.launched = false; plunger.power = 0;
+  comboTime = 0; tiltCount = 0; tiltLocked = false; tiltTimer = 0; banner.style.display = 'none';
+}
+function launchLogic() {
+  if (!ball.launched && ball.x > VIRTUAL_W-80- ball.r - 1) {
+    if (keys.space) plunger.power = Math.min(plunger.max, plunger.power + 0.6);
+    else if (plunger.power > 0) {
+      ball.vy = -plunger.power * 1.8;
+      ball.launched = true;
+      playSfx(sfx.launch);
+      plunger.power = 0;
+    }
+  }
+}
+function updateFlippers() {
+  for (const f of flippers) {
+    const target = f.baseAngle + ((keys[f.key] && !tiltLocked) ? f.maxAngle : 0);
+    f.angle += (target - f.angle) * 0.4;
+  }
+}
+function reflectBallOnSegment(seg) {
+  const { x1, y1, x2, y2 } = seg;
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx*dx + dy*dy;
+  const t = clamp(((ball.x - x1)*dx + (ball.y - y1)*dy) / len2, 0, 1);
+  const cx = x1 + t*dx, cy = y1 + t*dy;
+  const dist = Math.hypot(ball.x - cx, ball.y - cy);
+  if (dist < ball.r) {
+    const nx = (ball.x - cx)/dist, ny = (ball.y - cy)/dist;
+    const dot = ball.vx*nx + ball.vy*ny;
+    ball.vx -= 2 * dot * nx; ball.vy -= 2 * dot * ny;
+    ball.vx *= 0.98; ball.vy *= 0.98;
+    const overlap = ball.r - dist;
+    ball.x += nx * overlap; ball.y += ny * overlap;
+  }
+}
+function collideCircle(x, y, r, kick=1.12) {
+  const dx = ball.x - x, dy = ball.y - y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < ball.r + r) {
+    const nx = dx / dist, ny = dy / dist;
+    const dot = ball.vx*nx + ball.vy*ny;
+    ball.vx -= 2 * dot * nx; ball.vy -= 2 * dot * ny;
+    ball.vx *= kick; ball.vy *= kick;
+    const overlap = ball.r + r - dist;
+    ball.x += nx * overlap; ball.y += ny * overlap;
+    return true;
+  }
+  return false;
+}
+function flipperCollision(f) {
+  const x1 = f.x, y1 = f.y;
+  const x2 = f.x + Math.cos(f.angle) * f.len;
+  const y2 = f.y + Math.sin(f.angle) * f.len;
+  reflectBallOnSegment({ x1, y1, x2, y2 });
+  if (keys[f.key] && !tiltLocked) {
+    const ax = Math.cos(f.angle), ay = Math.sin(f.angle);
+    const impulse = 0.9;
+    const d = Math.hypot(ball.x - x2, ball.y - y2);
+    if (d < 22) {
+      ball.vx += ax * impulse * 2 * (f.dir);
+      ball.vy += ay * impulse * 2 * (f.dir);
+      playSfx(sfx.flipper);
+    }
+  }
+}
+
+// Tilt/Nudge
+function triggerNudge() {
+  if (tiltLocked) return;
+  // Apply small horizontal impulse based on ball position (risk/reward)
+  const nudgePower = 1.2;
+  ball.vx += (ball.x < VIRTUAL_W/2 ? -nudgePower : nudgePower);
+  tiltCount++;
+  // If nudged too frequently, trigger tilt
+  if (tiltCount >= 3) {
+    tiltLocked = true;
+    tiltTimer = 120; // ~2 seconds at 60fps
+    banner.style.display = 'block';
+    banner.textContent = 'TILT!';
+  }
+}
+
+// Scoring helpers
+function addScore(base) {
+  // Combo bonus if within window
+  let bonus = 0;
+  if (comboTime > 0) bonus = 50;
+  score += (base * multiplier) + bonus;
+  scoreEl.textContent = score;
+  comboTime = COMBO_WINDOW; // reset combo window
+}
+function advanceMultiplier() {
+  const order = [1, 2, 3, 5];
+  const idx = order.indexOf(multiplier);
+  multiplier = order[Math.min(order.length - 1, idx + 1)];
+  // Reset lamps for next run
+  for (const l of lamps) l.lit = false;
+  lampsLit = 0;
+}
+
+// Game loop
+let lastTs = performance.now();
+function update(deltaSec) {
+  // Combo countdown
+  if (comboTime > 0) comboTime = Math.max(0, comboTime - deltaSec);
+
+  // Tilt timer
+  if (tiltLocked) {
+    tiltTimer -= deltaSec * 60;
+    if (tiltTimer <= 0) {
+      tiltLocked = false;
+      tiltCount = 0;
+      banner.style.display = 'none';
+    }
+  }
+
+  // Desktop tilt key
+  if (keys.tilt) triggerNudge();
+
+  // Physics
+  ball.vy += GRAV;
+  ball.vx *= FRICTION; ball.vy *= FRICTION;
+  ball.x += ball.vx; ball.y += ball.vy;
+
+  // Collisions
+  for (const w of walls) reflectBallOnSegment(w);
+  updateFlippers();
+  for (const f of flippers) flipperCollision(f);
+
+  // Bumpers (scoring with multiplier + combo)
+  for (const b of bumpers) {
+    if (collideCircle(b.x, b.y, b.r, 1.15)) {
+      addScore(b.value);
+      playSfx(sfx.bumper);
+    }
+  }
+
+  // Lamps (advance multiplier when all lit)
+  for (const l of lamps) {
+    if (!l.lit && collideCircle(l.x, l.y, l.r, 1.05)) {
+      l.lit = true; lampsLit++;
+      addScore(100); // small reward per lamp
+      if (lampsLit === lamps.length) {
+        advanceMultiplier();
+        // Show a brief banner
+        banner.style.display = 'block';
+        banner.textContent = `Multiplier: ${multiplier}x`;
+        setTimeout(() => { if (!tiltLocked) banner.style.display = 'none'; }, 1200);
+      }
+    }
+  }
+
+  // Drain
+  if (ball.y > VIRTUAL_H - 90 && ball.x < VIRTUAL_W - 80 - 10) {
+    balls--; ballsEl.textContent = balls; playSfx(sfx.drain);
+    // Reset lamps and combo on drain
+    for (const l of lamps) l.lit = false; lampsLit = 0; comboTime = 0;
+    if (balls > 0) resetBall(); else gameOver = true;
+  }
+
+  // Plunger lane logic
+  if (!ball.launched && ball.x < VIRTUAL_W-80 - ball.r) ball.launched = true;
+  launchLogic();
+}
+
+function glowCircle(x, y, r, color, lit = true) {
+  ctx.shadowColor = color; ctx.shadowBlur = lit ? 12 : 4;
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#080b10'; ctx.stroke();
+}
+function drawPixelRect(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.round(x/PIX)*PIX, Math.round(y/PIX)*PIX, Math.round(w/PIX)*PIX, Math.round(h/PIX)*PIX);
+}
+
+function draw() {
+  ctx.clearRect(0,0,VIRTUAL_W,VIRTUAL_H);
+
+  // Frame
+  ctx.strokeStyle = theme.green; ctx.lineWidth = 2;
+  ctx.strokeRect(18,18,VIRTUAL_W-36,VIRTUAL_H-120);
+
+  // Plunger lane
+  drawPixelRect(VIRTUAL_W-80, 20, 60, VIRTUAL_H-120, theme.bg);
+  drawPixelRect(VIRTUAL_W-40, VIRTUAL_H-120 - plunger.power*4, 24, plunger.power*4, theme.green);
+
+  // Bumpers
+  for (const b of bumpers) glowCircle(b.x, b.y, b.r, b.color);
+
+  // Lamps
+  for (const l of lamps) glowCircle(l.x, l.y, l.r, l.color, l.lit);
+
+  // Walls
+  ctx.strokeStyle = '#2a3b4d'; ctx.lineWidth = 4;
+  for (const w of walls) { ctx.beginPath(); ctx.moveTo(w.x1,w.y1); ctx.lineTo(w.x2,w.y2); ctx.stroke(); }
+
+  // Flippers
+  for (const f of flippers) {
+    const x1 = f.x, y1 = f.y;
+    const x2 = f.x + Math.cos(f.angle) * f.len;
+    const y2 = f.y + Math.sin(f.angle) * f.len;
+    ctx.strokeStyle = f.color; ctx.lineWidth = 6;
+    ctx.shadowColor = f.color; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Ball
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#b0b0b0'; ctx.stroke();
+
+  // Bottom apron
+  drawPixelRect(20, VIRTUAL_H-100, VIRTUAL_W-100, 80, theme.apron);
+
+  // Footer help
+  ctx.fillStyle = theme.green; ctx.font = '12px monospace';
+  ctx.fillText(`Left/Right: flippers | Space: launch | S: nudge | Multiplier: ${multiplier}x`, 28, VIRTUAL_H-70);
+}
+
+// Main loop with delta timing
+let prev = performance.now();
+function loop(ts = performance.now()) {
+  const deltaSec = Math.min(0.05, (ts - prev) / 1000); // clamp for stability
+  prev = ts;
+  if (!gameOver) { update(deltaSec); draw(); requestAnimationFrame(loop); }
+  else {
+    ctx.fillStyle = theme.green; ctx.font = '20px monospace';
+    ctx.fillText('GAME OVER - Press Space to restart', 80, VIRTUAL_H/2);
+    if (keys.space) {
+      score = 0; balls = 3; scoreEl.textContent = 0; ballsEl.textContent = 3;
+      multiplier = 1; for (const l of lamps) l.lit = false; lampsLit = 0;
+      gameOver = false; resetBall(); requestAnimationFrame(loop);
+    }
+  }
+}
+resetBall(); loop();
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 520,
+    height: 900,
+    backgroundColor: '#0b0f14',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+  const devUrl = process.env.VITE_DEV_SERVER_URL;
+  if (devUrl) {
+    win.loadURL(devUrl);
+    win.webContents.openDevTools();
+  } else {
+    win.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+src/
+ ├─ leaderboard.js
+ └─ leaderboard.html
+// Local leaderboard using browser localStorage
+const LB_KEY = 'neonPinballLeaderboard';
+
+export function getLeaderboard() {
+  const raw = localStorage.getItem(LB_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+export function addScore(name, score) {
+  const lb = getLeaderboard();
+  lb.push({ name, score, date: new Date().toISOString() });
+  lb.sort((a,b) => b.score - a.score);
+  const top10 = lb.slice(0,10);
+  localStorage.setItem(LB_KEY, JSON.stringify(top10));
+  return top10;
+}
+
+export function clearLeaderboard() {
+  localStorage.removeItem(LB_KEY);
+}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Leaderboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <h1 style="color:var(--green);text-align:center;">🏆 Neon Pinball Leaderboard</h1>
+  <table id="lb" style="margin:auto;color:var(--text);font:16px monospace;">
+    <thead><tr><th>Rank</th><th>Name</th><th>Score</th><th>Date</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <script type="module">
+    import { getLeaderboard } from './leaderboard.js';
+    const tbody = document.querySelector('#lb tbody');
+    const lb = getLeaderboard();
+    lb.forEach((entry,i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td>${entry.name}</td><td>${entry.score}</td><td>${new Date(entry.date).toLocaleString()}</td>`;
+      tbody.appendChild(tr);
+    });
+  </script>
+</body>
+</html>
+else {
+  ctx.fillStyle = theme.green; ctx.font = '20px monospace';
+  ctx.fillText('GAME OVER - Press Space to restart', 80, VIRTUAL_H/2);
+
+  if (keys.space) {
+    // Save score to leaderboard
+    const name = prompt("Enter your name for leaderboard:") || "Player";
+    import('./leaderboard.js').then(lb => {
+      lb.addScore(name, score);
+    });
+
+    // Reset game
+    score = 0; balls = 3; scoreEl.textContent = 0; ballsEl.textContent = 3;
+    multiplier = 1; for (const l of lamps) l.lit = false; lampsLit = 0;
+    gameOver = false; resetBall(); requestAnimationFrame(loop);
+  }
+}
+
+
